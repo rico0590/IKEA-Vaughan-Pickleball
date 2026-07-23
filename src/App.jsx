@@ -17,16 +17,25 @@ import {
 } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
-// These two values come from your Supabase project settings.
-// They're set as environment variables in Netlify (see the deploy guide).
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Trim in case a stray space or line break came along with a pasted value.
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || "").trim().replace(/^["']|["']$/g, "");
+const SUPABASE_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim().replace(/^["']|["']$/g, "");
 
-// If the variables are missing, creating the client would crash the whole
-// page to a blank white screen. Instead we flag it and show a helpful
-// message below so the problem is visible.
-const CONFIG_OK = Boolean(SUPABASE_URL && SUPABASE_KEY);
-const supabase = CONFIG_OK ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// Creating the client with missing or malformed values throws, which would
+// crash the page to a blank white screen. We catch that instead and show a
+// readable message below.
+let supabase = null;
+let CONFIG_ERROR = null;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  CONFIG_ERROR = "missing";
+} else {
+  try {
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  } catch (e) {
+    CONFIG_ERROR = e && e.message ? e.message : "invalid";
+  }
+}
+const CONFIG_OK = Boolean(supabase);
 
 const ADMIN_PASSWORD = "VAUGHAN26";
 
@@ -480,13 +489,14 @@ export default function App() {
       <div className="ivp-root min-h-screen flex items-center justify-center px-6">
         <style>{FONT_STYLES}</style>
         <div className="ivp-card p-6 max-w-md">
-          <span className="ivp-eyebrow">Setup needed</span>
+          <span className="ivp-eyebrow">Setup needed · v2</span>
           <h1 className="ivp-display font-bold text-xl mt-2 mb-3">Database not connected</h1>
           <p className="text-sm text-[#14213D]/75 mb-3">
-            The site loaded, but its Supabase keys are missing. In Netlify go to
-            Site configuration → Environment variables and add both of these,
+            The site loaded, but it couldn't connect to Supabase. In Netlify go to
+            Site configuration → Environment variables, check both values below,
             then run Deploys → Trigger deploy → Deploy site.
           </p>
+          <p className="ivp-mono text-[10px] text-red-600 mb-3 break-words">Reason: {CONFIG_ERROR}</p>
           <ul className="space-y-1.5">
             <li className="flex items-center gap-2 text-xs">
               <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${SUPABASE_URL ? "bg-[#7CB518]" : "bg-red-500"}`}>
